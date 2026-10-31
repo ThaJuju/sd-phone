@@ -1,9 +1,10 @@
 # sd-phone — modifications maison
 
-Base : **sd-phone v1.0.6** (<https://github.com/Samuels-Development/sd-phone>, GPL-3.0).
+Base : **sd-phone v1.0.9** (<https://github.com/Samuels-Development/sd-phone>, GPL-3.0).
 Importée en v1.0.3 (commit « Téléphone : import de sd-phone v1.0.3 et sd-phone-props
 (vanilla) »), puis mise à jour en v1.0.4 le 2026-09-24, en v1.0.5 le 2026-09-25 et en
-v1.0.6 le 2026-10-11.
+v1.0.6 le 2026-10-11, puis en v1.0.9 le 2026-10-31 (première mise à jour par fusion
+git dans le fork).
 
 **Depuis le 2026-10-31, la ressource vit dans un fork** :
 <https://github.com/ThaJuju/sd-phone>, branche **`auralys`** (tag amont + nos commits).
@@ -63,6 +64,7 @@ terminal) qui ne peut pas exister quand l'appli est coupée.
 | `configs/services.lua` | libellés FR des sociétés (`LSPD`, `EMS`, `Mécanicien`) | affichage |
 | `configs/banking.lua` | `PersonalInvoices.Enabled = false` | factures = `mainframe/factures` |
 | `configs/voice.lua` | `RecordNearbyVoices = false` | RGPD : en vanilla, une vidéo ou un live enregistre le micro des joueurs alentour sans leur accord, et l'audio transite par Cloudflare |
+| `server.cfg` (esxbase) | `set sd_phone_qbphonecompat false` | v1.0.9 : la couche qb-phone est inutile sous ESX ; active, elle crée `phone_invoices`, importe ces factures dans le Wallet et ouvre des net events hors de la garde du § 1 |
 | `configs/payphone.lua` | `Debug = false` | logs de debug en production |
 
 Les actions de patron et de multi-job de l'appli Services
