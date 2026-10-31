@@ -1,11 +1,16 @@
 # sd-phone — modifications maison
 
-Base : **sd-phone v1.0.6**, release GitHub officielle
-(<https://github.com/Samuels-Development/sd-phone>, GPL-3.0). Importée en v1.0.3
-(commit « Téléphone : import de sd-phone v1.0.3 et sd-phone-props (vanilla) »),
-puis mise à jour en v1.0.4 le 2026-09-24, en v1.0.5 le 2026-09-25 et en v1.0.6 le 2026-10-11.
-Tout écart avec cette base est listé
-ici : **à reporter à chaque mise à jour** de sd-phone.
+Base : **sd-phone v1.0.6** (<https://github.com/Samuels-Development/sd-phone>, GPL-3.0).
+Importée en v1.0.3 (commit « Téléphone : import de sd-phone v1.0.3 et sd-phone-props
+(vanilla) »), puis mise à jour en v1.0.4 le 2026-09-24, en v1.0.5 le 2026-09-25 et en
+v1.0.6 le 2026-10-11.
+
+**Depuis le 2026-10-31, la ressource vit dans un fork** :
+<https://github.com/ThaJuju/sd-phone>, branche **`auralys`** (tag amont + nos commits).
+Dans esxbase, `resources/[standalone]/sd-phone` est un **git subtree** de cette branche
+(pas un dépôt imbriqué). Les modifications se font dans le fork, puis sont ramenées dans
+esxbase (voir « Procédure de mise à jour »). Ce fichier reste l'inventaire de nos écarts
+avec l'amont : il sert à comprendre un conflit de fusion, plus à réappliquer à la main.
 
 Principe : toucher le cœur le moins possible. Réglages = fichiers `configs/`,
 logique maison = fichiers nouveaux, et de rares accroches marquées
@@ -135,9 +140,10 @@ l'affichage de l'appli sur elle.
 
 ## 5. Fichiers ajoutés sans rapport avec le code
 
-- `LICENSE`, `PRIVACY.md`, `THIRD_PARTY_NOTICES.md` : repris du dépôt source,
-  absents du zip de release (obligation GPL-3.0 de conserver la licence).
 - `PATCHES.md` : ce fichier.
+- `web/build/` : NUI compilée, **versionnée sur la branche `auralys`** (l'amont l'ignore
+  et ne la fournit que dans le zip de release). Le reste du dépôt amont (`web/src`,
+  `docs/`, `.github/`, `sql/`) est présent mais inerte pour FiveM.
 
 ## 6. Prise de service mainframe → interrupteur « En service » de l'appli Services
 
@@ -230,18 +236,37 @@ aucun wipe de personnage ne passe.
 
 ## Procédure de mise à jour
 
-1. Télécharger le zip de la **release** (pas le code source : il n'a pas la NUI compilée),
-   ainsi que celui de la version actuelle : un `diff -rq` entre les deux zips liste
-   les seuls fichiers à reprendre, et montre si un fichier patché ou `configs/` bouge.
-2. Remplacer le dossier, en gardant `configs/mainframe.lua`,
-   `server/mainframe_gate.lua`, `server/mainframe_media.lua`,
-   `server/mainframe_upload.js`, `server/mainframe_duty.lua`, `PATCHES.md` et les fichiers du § 5.
-3. Réappliquer les accroches marquées `PATCH MAISON` (`server/main.lua`,
-   `server/photos/uploader.lua`, `server/radio/actions.lua`, `server/radio/init.lua`,
-   `client/apps/radio.lua`, `bridge/client/voice.lua`, `fxmanifest.lua`), l'export du § 7
-   (`server/sim/init.lua`) et les réglages des § 2 et 3 :
-   les comparer au nouveau `configs/` plutôt que d'écraser. Le plus sûr :
-   `diff -ruN <zip actuel> <ressource>` (en excluant les fichiers du point 2 et `.secret`)
-   donne l'ensemble des patchs, à appliquer par `patch -p1` sur le nouveau zip.
-4. Vérifier que les préfixes de `configs/mainframe.lua` correspondent toujours
-   aux callbacks (`grep -rhoE "lib.callback.register\('sd-phone:server:[a-zA-Z:]+" server`).
+Clone de travail du fork : `/mnt/DISK/sd-phone` (remotes `origin` = fork,
+`upstream` = Samuels-Development ; identité ThaJuju). À recréer au besoin :
+
+```bash
+git clone https://github.com/ThaJuju/sd-phone.git /mnt/DISK/sd-phone
+cd /mnt/DISK/sd-phone && git remote add upstream https://github.com/Samuels-Development/sd-phone.git
+git checkout auralys
+```
+
+**Modification maison** : commit sur `auralys` dans le clone, `git push`, puis le
+rapatriement ci-dessous. Si la NUI change (`web/src`), reconstruire et committer
+`web/build` dans le même commit : `cd web && npm ci && npm run build`.
+
+**Nouvelle version amont** (ex. v1.0.9) :
+
+1. `git fetch upstream --tags && git checkout auralys && git merge v1.0.9`
+   — résoudre les conflits à l'aide des sections ci-dessus. `web/build` est toujours
+   en conflit : le régénérer (`cd web && npm ci && npm run build`) puis `git add web/build`.
+2. Comparer le nouveau `configs/` amont à nos réglages (§ 2 et 3) et vérifier que les
+   préfixes de `configs/mainframe.lua` correspondent toujours aux callbacks
+   (`grep -rhoE "lib.callback.register\('sd-phone:server:[a-zA-Z:]+" server`).
+3. Mettre à jour la ligne « Base » en tête de ce fichier, committer, `git push`.
+4. Optionnel : `git push origin upstream/main:main` garde la branche `main` du fork
+   alignée sur l'amont.
+
+**Rapatriement dans esxbase** (depuis `/mnt/DISK/esxbase`) :
+
+```bash
+git subtree pull --prefix="resources/[standalone]/sd-phone" https://github.com/ThaJuju/sd-phone.git auralys --squash -m "Téléphone : sd-phone <version ou objet>"
+```
+
+Ne jamais modifier directement `resources/[standalone]/sd-phone` dans esxbase : la
+modification serait écrasée ou en conflit au prochain `subtree pull`. La clé
+`.secret` (ignorée) n'est jamais committée, ni dans esxbase ni dans le fork public.
