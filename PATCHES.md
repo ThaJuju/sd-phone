@@ -7,8 +7,8 @@ v1.0.6 le 2026-10-11.
 
 **Depuis le 2026-10-31, la ressource vit dans un fork** :
 <https://github.com/ThaJuju/sd-phone>, branche **`auralys`** (tag amont + nos commits).
-Dans esxbase, `resources/[standalone]/sd-phone` est un **git subtree** de cette branche
-(pas un dépôt imbriqué). Les modifications se font dans le fork, puis sont ramenées dans
+Dans esxbase, `resources/[standalone]/sd-phone` est une **copie synchronisée** de cette
+branche (format git subtree squash, pas un dépôt imbriqué). Les modifications se font dans le fork, puis sont ramenées dans
 esxbase (voir « Procédure de mise à jour »). Ce fichier reste l'inventaire de nos écarts
 avec l'amont : il sert à comprendre un conflit de fusion, plus à réappliquer à la main.
 
@@ -264,8 +264,12 @@ rapatriement ci-dessous. Si la NUI change (`web/src`), reconstruire et committer
 **Rapatriement dans esxbase** (depuis `/mnt/DISK/esxbase`) :
 
 ```bash
-git subtree pull --prefix="resources/[standalone]/sd-phone" https://github.com/ThaJuju/sd-phone.git auralys --squash -m "Téléphone : sd-phone <version ou objet>"
+scripts/sd-phone-sync.sh
 ```
+
+Il récupère `auralys` et remplace le dossier par son contenu dans un seul commit
+(squash, sans l'historique amont). Ne pas utiliser `git subtree pull` : avec git 2.34,
+les crochets de `[standalone]` cassent sa recherche du dernier import.
 
 Ne jamais modifier directement `resources/[standalone]/sd-phone` dans esxbase : la
 modification serait écrasée ou en conflit au prochain `subtree pull`. La clé
