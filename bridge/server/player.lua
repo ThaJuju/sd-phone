@@ -304,6 +304,15 @@ function player.getAnySourceByIdentifier(citizenid)
     return sourceFor(citizenid)
 end
 
+---The connected source whose framework-native identifier is `citizenid`, bypassing SIM
+---indirection. The source-side twin of getRealIdentifier. Read-only.
+---@param citizenid string|nil
+---@return number|nil source nil if offline
+function player.getSourceByRealIdentifier(citizenid)
+    if not citizenid or citizenid == '' then return nil end
+    return sourceFor(citizenid)
+end
+
 ---@type { map: table<string, number>|nil, at: number, gen: number } Memo of the built map. A
 ---fan-out builds this per push, so on a busy server the same table was rebuilt many times a
 ---second from an unchanged player list.

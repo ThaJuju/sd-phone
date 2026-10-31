@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { device } from '@device';
 import { fetchNui, hostResource } from '@/core/nui';
+import type { HostMessage, PageMessage, PhoneEndpoint } from '@/sdk/protocol';
+import { loadInter, pageVarsCss, phoneVars } from './appPageTheme';
 import { apiData } from '@/core/api';
 import { accountsMyEmail, accountsSaveCustomPassword } from '@/core/accountsApi';
 import { apiSavePhotoFromUrl } from '@/core/photosApi';
@@ -22,7 +24,7 @@ import { ContactPickerSheet } from '@/shared/ContactPickerSheet';
 import { formatPhone } from '@/apps/phone/data';
 import { accentVars } from '@/apps/settings/appearance/accentRamp';
 import { isCustomPaletteId, rampFor, rampVars } from '@/apps/settings/appearance/paletteRamp';
-import { Camera } from '@/apps/camera/Camera';
+import { Camera, type CameraUse } from '@/apps/camera/Camera';
 import { AppIconSVG } from './AppIconSVG';
 import { useDeckActive } from './deckActive';
 import { resolveCustomUi } from './widgets/customUrl';
@@ -84,6 +86,22 @@ function applyPhoneTheme(body: HTMLElement) {
     }
     for (const name of Array.from(body.style)) if (name.startsWith('--')) body.style.removeProperty(name);
     for (const [name, value] of Object.entries(vars)) body.style.setProperty(name, value);
+}
+
+// The --phone-* colours, read off the iframe element: it sits inside the phone's themed wrapper,
+// so the theme tokens computed on it are the ones the phone's own apps are drawn with. They go in a
+// <style> at the very start of the page, so the page's own rules still win over them.
+function applyPageVars(iframe: HTMLIFrameElement, doc: Document) {
+    const computed = getComputedStyle(iframe);
+    const css = pageVarsCss(phoneVars(token => computed.getPropertyValue(token)));
+    let style = doc.querySelector<HTMLStyleElement>('style[data-sd-phone-vars]');
+    if (!style) {
+        style = doc.createElement('style');
+        style.setAttribute('data-sd-phone-vars', '');
+        const parent = doc.head ?? doc.documentElement;
+        parent.insertBefore(style, parent.firstChild);
+    }
+    style.textContent = css;
 }
 
 function buildSettings(): Record<string, unknown> {
@@ -171,6 +189,8 @@ export function CustomAppFrame({ appId, onClose }: { appId: string; onClose: () 
     const [saveLogin, setSaveLogin] = useState<SaveLoginReq | null>(null);
     const [fullImage, setFullImage] = useState<string | null>(null);
     const [cameraOpen, setCameraOpen] = useState(false);
+    // The camera, called up over this app by the app's resource (exports['sd-phone']:useCamera).
+    const [cameraUse, setCameraUse] = useState<CameraUse | null>(null);
 
     const popupResolve   = useRef<((v: number | undefined) => void) | null>(null);
     const ctxResolve     = useRef<((v: number | undefined) => void) | null>(null);
@@ -233,7 +253,7 @@ export function CustomAppFrame({ appId, onClose }: { appId: string; onClose: () 
     }, []);
 
     const streamPopupInput = useCallback((value: string) => {
-        postToApp({ type: 'popUpInputChanged', value });
+        postToApp({ type: 'popUpInputChanged', value } satisfies HostMessage);
     }, [postToApp]);
 
     const notify = useCallback((data: Record<string, unknown>) => {
@@ -312,7 +332,7 @@ export function CustomAppFrame({ appId, onClose }: { appId: string; onClose: () 
         return { bytes, keys };
     }, []);
 
-    const fetchPhone = useCallback((event: string, data?: any): Promise<unknown> => {
+    const fetchPhone = useCallback((event: PhoneEndpoint, data?: any): Promise<unknown> => {
         switch (event) {
             case 'SetPopUp':
                 return new Promise(res => { popupResolve.current = res; setPopup(data ?? null); });
@@ -408,7 +428,7 @@ export function CustomAppFrame({ appId, onClose }: { appId: string; onClose: () 
 
     useEffect(() => {
         if (!loadedRef.current) return;
-        postToApp({ type: active ? 'appOpen' : 'appClose', data: { id: defRef.current?.id } });
+        postToApp({ type: active ? 'appOpen' : 'appClose', data: { id: defRef.current?.id } } satisfies HostMessage);
     }, [active, ready, postToApp]);
 
     const bridge = useMemo(() => {
@@ -532,6 +552,8 @@ export function CustomAppFrame({ appId, onClose }: { appId: string; onClose: () 
                 applyPhoneTheme(doc.body);
                 doc.body.setAttribute('data-device', 'phone');
             }
+            if (doc.documentElement) applyPageVars(iframe, doc);
+            void loadInter(doc);
             win.resourceName      = d.resource;
             win.appName           = d.name;
             win.appIdentifier     = d.id;
@@ -581,14 +603,16 @@ export function CustomAppFrame({ appId, onClose }: { appId: string; onClose: () 
         try {
             const body = iframe.contentDocument?.body;
             if (body) applyPhoneTheme(body);
+            const doc = iframe.contentDocument;
+            if (doc?.documentElement) applyPageVars(iframe, doc);
         } catch { /* cross-origin */ }
-        postToApp({ type: 'settingsUpdated', settings: buildSettings() });
+        postToApp({ type: 'settingsUpdated', settings: buildSettings() } satisfies HostMessage);
     }, [theme, darkTheme, lightTheme, accent, customPalettes, airplaneMode, hour24, brightness, postToApp]);
 
     useEffect(() => {
         function onFrameMessage(event: MessageEvent) {
             if (event.source !== iframeRef.current?.contentWindow) return;
-            const msg = event.data as { type?: string; message?: string } | null;
+            const msg = event.data as PageMessage | null;
             if (!msg || typeof msg.type !== 'string') return;
             if (msg.type === 'sdphoneDebug' && typeof msg.message === 'string') { frameDebug(msg.message); return; }
             if (msg.type === 'sdphoneSdkReady') markSdkReady();
@@ -602,6 +626,40 @@ export function CustomAppFrame({ appId, onClose }: { appId: string; onClose: () 
         if (!data || (data.id !== appId && data.id !== 'any')) return;
         postToApp(data.message);
     }, [appId, postToApp]));
+
+    // Lua says when this app's resource has called the camera, and when the call is over. A frame
+    // that was not there to hear (the phone was away, and is opened on the app by the call) asks
+    // as it comes to the front.
+    const readCameraUse = (raw: unknown): CameraUse | null => {
+        const u = raw as Partial<CameraUse> | null | false | undefined;
+        if (!u || typeof u.id !== 'number') return null;
+        return {
+            id:      u.id,
+            hint:    typeof u.hint === 'string' ? u.hint : undefined,
+            overlay: typeof u.overlay === 'string' ? u.overlay : undefined,
+        };
+    };
+
+    useNuiEvent('customApps:camera', (data) => {
+        if (!data || data.id !== appId) return;
+        setCameraUse(readCameraUse(data.use));
+    });
+
+    useEffect(() => {
+        if (!active) return;
+        let stale = false;
+        void fetchNui<{ use?: unknown }>('customApps/camera', { id: appId }).then((res) => {
+            if (!stale && res?.use) setCameraUse(readCameraUse(res.use));
+        });
+        return () => { stale = true; };
+    }, [active, appId]);
+
+    const dismissCameraUse = useCallback(() => {
+        setCameraUse((current) => {
+            if (current) void fetchNui('sd-phone:camera:useDismissed', { id: current.id });
+            return null;
+        });
+    }, []);
 
     const activeRef = useRef(false);
     useEffect(() => {
@@ -719,6 +777,18 @@ export function CustomAppFrame({ appId, onClose }: { appId: string; onClose: () 
                         photoOnly
                         onCapture={url => settleCamera(url)}
                         onClose={() => settleCamera(null)}
+                    />
+                </div>
+            )}
+
+            {/* The same camera, called by the app's resource: its shutter is the resource's. */}
+            {cameraUse && !cameraOpen && (
+                <div className="absolute inset-0 z-[80] bg-black">
+                    <Camera
+                        key={cameraUse.id}
+                        photoOnly
+                        use={cameraUse}
+                        onClose={dismissCameraUse}
                     />
                 </div>
             )}

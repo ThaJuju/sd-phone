@@ -4,7 +4,7 @@ lua54 'yes'
 
 name 'sd-phone'
 author 'Samuel#0008'
-version '1.0.6'
+version '1.0.9'
 description 'Full-featured in-game smartphone: 46 apps covering calls, messages, mail, social feeds, banking, stocks, marketplace, garages, housing, jobs, maps, camera, music and games, plus home screen widgets, icon themes you can design, cell tower and Wi-Fi coverage, payphones, unique phones and SIM cards, an API for third-party apps and widgets, and lb-phone compatibility'
 
 shared_scripts {
@@ -25,6 +25,7 @@ server_scripts {
     'server/mainframe_upload.js', -- PATCH MAISON (mainframe) : fournisseur de médias, voir PATCHES.md
     'bridge/server/init.lua',
     'server/main.lua',
+    'server/compat/computers.lua', -- sd-computers link (optional; inert unless sd-computers calls it)
 }
 
 ui_page 'web/build/index.html'
@@ -66,3 +67,4 @@ provide 'qs-smartphone-pro'
 provide 'qs-smartphone-lite'
 provide 'gksphone'
 provide 'roadphone'
+provide 'qb-phone'

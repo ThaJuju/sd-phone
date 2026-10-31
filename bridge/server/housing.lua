@@ -29,8 +29,16 @@ local function detectSystem()
     return nil
 end
 
----@type string|nil Active housing system's resource name, resolved once at load (nil = none).
+---@type string|nil Active housing system's resource name, resolved at load (nil = none).
 local ACTIVE = detectSystem()
+
+---Re-runs detection one tick after a listed housing resource starts while none is active yet.
+---@param name string resource that started
+AddEventHandler('onResourceStart', function(name)
+    if ACTIVE or not lib.table.contains(H.Resources or {}, name) then return end
+
+    SetTimeout(0, function() ACTIVE = detectSystem() end)
+end)
 
 ---Parameterised query; returns nil on error or a non-table result.
 ---@param sql string parameterised SQL
@@ -696,6 +704,37 @@ ADAPTERS['kartik-properties'] = function(source, id)
     return out
 end
 
+---qbx_properties: Qbox's property system, read from its `properties` table by owner citizenid.
+---Interiors named like an apartment list as Apartment, everything else as House.
+---@param source number caller server id (zone label lookup)
+---@param id string caller citizenid
+---@return table[] homes
+ADAPTERS['qbx_properties'] = function(source, id)
+    local rows = dbQuery(
+        'SELECT `id`, `property_name`, `coords`, `price`, `interior`, `rent_interval` FROM `properties` WHERE `owner` = ?',
+        { id }
+    )
+    if not rows then return {} end
+
+    local out = {}
+    for _, r in ipairs(rows) do
+        local coords = coordsFrom(r, 'coords')
+        local zone = coords and clientExec(source, 'zone', coords)
+        local interior = tostring(r.interior or ''):lower()
+        local isApartment = interior:find('apt', 1, true) or interior:find('apart', 1, true)
+        out[#out + 1] = home{
+            id      = r.id,
+            address = s(r.property_name),
+            type    = isApartment and 'Apartment' or 'House',
+            area    = type(zone) == 'string' and zone or '',
+            value   = r.price,
+            status  = r.rent_interval and 'rented' or 'owned',
+            coords  = coords,
+        }
+    end
+    return out
+end
+
 -- Capability map: which detail-view actions each system supports.
 ---@type table<string, { lock: boolean, keyList: boolean, keyManage: boolean }> Per-system action support.
 local CAPS = {
@@ -711,6 +750,7 @@ local CAPS = {
     ['LNS_Housing']    = { lock = true,  keyList = true,  keyManage = true  },
     ['nolag_properties'] = { lock = true,  keyList = true,  keyManage = true  },
     ['kartik-properties'] = { lock = true,  keyList = true,  keyManage = true  },
+    ['qbx_properties'] = { lock = false, keyList = true,  keyManage = false },
 }
 
 ---Capability flags for the active system, all-false when none is detected.
@@ -941,6 +981,10 @@ function housing.keyHolders(src, id)
             end
         end
         return out
+    elseif ACTIVE == 'qbx_properties' then
+        if not ownsProperty(src, id) then return {} end
+        local rows = dbQuery('SELECT `keyholders` FROM `properties` WHERE `id` = ?', { p })
+        return resolveCids(decodeJson(rows and rows[1] and rows[1].keyholders))
     end
     return {}
 end

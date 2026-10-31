@@ -369,6 +369,7 @@ export type NuiMessage =
     | { action: 'sd-phone:camera:key';            data: { key: string } }
     | { action: 'sd-phone:camera:lock';           data: { on: boolean } }
     | { action: 'sd-phone:camera:faceCam';        data: { on: boolean } }
+    | { action: 'sd-phone:camera:useMessage';     data: { id: number; payload: unknown } }
     | { action: 'sd-phone:photos:added';          data: { id: string; url: string; createdAt: string } }
     | { action: 'sd-phone:id:received';           data: ReceivedIdCard }
     | { action: 'sd-phone:medical:scanned';       data: { record?: MedicalId } }
@@ -457,6 +458,7 @@ export type NuiMessage =
     | { action: 'sd-phone:cherry:partner';     data: { username: string; partner: unknown } }
     | { action: 'sd-phone:photogram:notification' }
     | { action: 'sd-phone:photogram:dmReceived'; data: { peer: string; user: PhotogramUser; message: PhotogramDM } }
+    | { action: 'sd-phone:photogram:openProfile'; data: { handle: string } }
     | { action: 'sd-phone:photogram:dmReaction'; data: { peer: string; id: string; reactions: Reaction[] } }
     | { action: 'sd-phone:photogram:postChanged'; data: { postId: string; likes?: number; comments?: number; comment?: unknown } }
     | { action: 'sd-phone:photogram:feedChanged' }
@@ -547,7 +549,7 @@ export type NuiMessage =
     | { action: 'sd-phone:notification';       data: { id?: string; app?: string; image?: string; titleKey?: string; title: string; titleVars?: Record<string, string | number>; bodyKey?: string; body?: string; bodyVars?: Record<string, string | number>; time?: string; appId?: string; quietInApp?: boolean; emergency?: boolean; otherPhone?: boolean; phoneColor?: string; profileKey?: string; link?: Record<string, unknown> } }
     | { action: 'sd-phone:badges';             data: Record<string, number> }
     | { action: 'sd-phone:badges:patch';       data: Record<string, number> }
-    | { action: 'sd-phone:airshare';           data: { id: string; kind: string; fromName: string } }
+    | { action: 'sd-phone:airshare';           data: { id: string; kind: string; fromName: string; detail?: string } }
     | { action: 'sd-phone:maps:friends:update'; data: FriendsUpdatePush }
     | { action: 'sd-phone:maps:location';       data: { x: number; y: number; h: number } }
     | { action: 'sd-phone:maps:calibrate';      data: { on: boolean } }
@@ -558,4 +560,5 @@ export type NuiMessage =
     | { action: 'sd-phone:services:invoices' }
     | { action: 'sd-phone:homes:refresh' }
     | { action: 'customApps:set';     data: CustomAppDef[] }
-    | { action: 'customApps:message'; data: { id: string; message: unknown } };
+    | { action: 'customApps:message'; data: { id: string; message: unknown } }
+    | { action: 'customApps:camera';  data: { id: string; use: unknown } };

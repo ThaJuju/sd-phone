@@ -7,6 +7,9 @@ local oxc       = framework.name == 'ox' and require 'bridge.shared.oxcore' or n
 ---@type table|nil ND_Core helpers (bridge.shared.ndcore); nil on every other framework.
 local ndc       = framework.name == 'nd' and require 'bridge.shared.ndcore' or nil
 ---@type table Player bridge (bridge.server.player): identifier -> online source resolution.
+---
+---Sources are ALWAYS resolved with getSourceByRealIdentifier: the citizenids handed in here come
+---from framework rosters, and under unique phones the plain resolver matches SIM identities only.
 local player    = require 'bridge.server.player'
 
 ---@type table Society module; the table returned at end of file. Reads and moves a company's
@@ -436,7 +439,7 @@ end
 ---@param grade? number
 ---@return boolean
 function society.hire(jobName, targetCid, grade)
-    local src = player.getSourceByIdentifier(targetCid)
+    local src = player.getSourceByRealIdentifier(targetCid)
     if not src then return false end
     return job.set(src, jobName, grade or 0) == true
 end
@@ -452,7 +455,7 @@ end
 ---@param fromJob? string the job being fired from; required on ox_core and ND
 ---@return boolean
 function society.fire(targetCid, unemployedJob, fromJob)
-    local src = player.getSourceByIdentifier(targetCid)
+    local src = player.getSourceByRealIdentifier(targetCid)
     if not src then return false end
     if framework.name == 'ox' or framework.name == 'nd' then
         if not fromJob then return false end
