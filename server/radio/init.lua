@@ -107,7 +107,8 @@ RegisterNetEvent('sd-phone:server:radio:presence', function(channel)
         return
     end
     if channel ~= 0 then
-        local res = actions.canTune(src, channel / 10)
+        -- PATCH MAISON : le canal EST la fréquence (cf client/apps/radio.lua).
+        local res = actions.canTune(src, channel)
         if res and res.allowed == false then
             setPresence(src, 0)
             TriggerClientEvent('sd-phone:client:radio:forceoff', src, {

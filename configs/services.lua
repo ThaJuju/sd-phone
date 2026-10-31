@@ -6,7 +6,7 @@ return {
     -- ESX-ONLY fallback. On QBCore/QBox boss status is read from the grade's
     -- `isboss` flag and this is ignored. On ESX (no isboss flag) it's the minimum
     -- grade treated as a boss when a company has no own `bossGrade`.
-    DefaultBossGrade = 3,
+    DefaultBossGrade = 999, -- [mainframe] personne n'est patron côté téléphone : embauche, renvoi et coffre passent par le menu patron RageUI
 
     -- Job a fired employee is reset to (QBCore/QBox and ESX both use 'unemployed').
     UnemployedJob = 'unemployed',
@@ -32,7 +32,7 @@ return {
     -- business account; otherwise it falls back to the sending employee's own
     -- bank (see bridge/server/society.lua). A per-company `commission` (below)
     -- splits off a cut of the society-credited payment to the sending employee.
-    InvoicesEnabled = true,
+    InvoicesEnabled = false, -- [mainframe] factures gérées par le module mainframe/factures
     -- Smallest and largest amount a single invoice may be for.
     MinInvoiceAmount = 1,
     MaxInvoiceAmount = 1000000,
@@ -59,34 +59,34 @@ return {
     Companies = {
         {
             job = 'police',
-            label = 'Police',
+            label = 'LSPD',
             location = 'Mission Row',
             color = '#0A84FF',
             emoji = '🚓',
             canCall = true,
             callNumber = '911',
-            bossGrade = 3,
+            bossGrade = 999,
             coords = { x = 425.1, y = -979.5, z = 30.7 },
         },
         {
             job = 'ambulance',
-            label = 'Ambulance',
+            label = 'EMS',
             location = 'Pillbox',
             color = '#C0392B',
             emoji = '🚑',
             canCall = true,
             callNumber = '912',
-            bossGrade = 3,
+            bossGrade = 999,
             coords = { x = 307.7, y = -1433.4, z = 29.9 },
         },
         {
             job = 'mechanic',
-            label = 'Mechanic',
+            label = 'Mécanicien',
             location = 'LS Customs',
             color = '#3A3A3C',
             emoji = '⚙️',
             canCall = false,
-            bossGrade = 2,
+            bossGrade = 999,
             commission = 0.1,
             coords = { x = -347.3, y = -133.8, z = 39.0 },
         },
@@ -97,7 +97,7 @@ return {
             color = '#27AE60',
             emoji = '🚕',
             canCall = false,
-            bossGrade = 2,
+            bossGrade = 999,
             commission = 0.15,
             coords = { x = 895.7, y = -179.3, z = 74.7 },
         },

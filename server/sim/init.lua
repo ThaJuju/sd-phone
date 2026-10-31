@@ -6,6 +6,12 @@ local config   = require 'configs.config'
 ---@type table SIM feature flags (server.sim.state): active + mode, flipped on here.
 local state    = require 'server.sim.state'
 
+-- Contrat serveur de maintenance : le wipe refuse les modes de propriété
+-- SIM/device tant que leurs registres ne font pas partie de son archive.
+exports('GetCharacterWipeMode', function()
+    return config.Sim and config.Sim.Enabled and (config.Sim.DataOwner or 'sim') or 'stock'
+end)
+
 -- Feature disabled: leave every flag off and register nothing - stock sd-phone behaviour.
 if not config.Sim or not config.Sim.Enabled then return {} end
 

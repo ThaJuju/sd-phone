@@ -3,6 +3,8 @@ local config = require 'configs.config'
 
 ---@type table Qbox CDN provider (server.photos.qbox): the multipart route through the Node helper.
 local qbox = require 'server.photos.qbox'
+-- PATCH MAISON (mainframe) : fournisseur « mainframe » (notre hébergement). Voir PATCHES.md.
+local mfmedia = require 'server.mainframe_media'
 
 ---@type table Media URL ledger (server.media.ledger): records every URL this server hosts, so a
 ---presigned-upload claim can tell a fresh object from one that already belongs to another app.
@@ -46,13 +48,16 @@ end
 ---never silently sends media somewhere the owner did not choose.
 ---@return 'fivemanage'|'qbox'
 function uploader.provider()
-    return tostring(PHOTOS.Provider or 'fivemanage'):lower() == 'qbox' and 'qbox' or 'fivemanage'
+    local wanted = tostring(PHOTOS.Provider or 'fivemanage'):lower()
+    if wanted == 'mainframe' then return 'mainframe' end -- PATCH MAISON (mainframe)
+    return wanted == 'qbox' and 'qbox' or 'fivemanage'
 end
 
 ---True when the active provider has a token set. Read at boot so a server missing its key is
 ---told once at startup, instead of every player discovering it as a capture that never lands.
 ---@return boolean
 function uploader.configured()
+    if uploader.provider() == 'mainframe' then return mfmedia.configured() end -- PATCH MAISON (mainframe)
     if uploader.provider() == 'qbox' then return qbox.configured() end
     return mediaKey() ~= ''
 end
@@ -151,6 +156,10 @@ function uploader.uploadMedia(base64Image, filename, cb)
         return
     end
 
+    if uploader.provider() == 'mainframe' then -- PATCH MAISON (mainframe)
+        mfmedia.uploadMedia(base64Image, filename, recorded)
+        return
+    end
     if uploader.provider() == 'qbox' then
         qbox.uploadMedia(base64Image, filename, recorded)
         return

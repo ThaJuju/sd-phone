@@ -51,7 +51,7 @@ return {
     -- Person-to-person invoicing from the Wallet's Invoices tab (business invoicing is
     -- configured in configs/services.lua and unaffected by this block).
     PersonalInvoices = {
-        Enabled    = true,
+        Enabled    = false, -- [mainframe] factures gérées par le module mainframe/factures
         MinAmount  = 1,        -- smallest allowed invoice
         MaxAmount  = 1000000,  -- largest allowed invoice
         MaxPending = 10,       -- outstanding unpaid invoices one sender may have at once

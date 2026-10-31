@@ -17,7 +17,7 @@ return {
     -- 'qbox' uses the Qbox Dashboard CDN (QboxCdn in configs/server/apikeys.lua, or the
     -- sd_qbox_cdn_key convar). Generate the token at https://dashboard.qbox.re -> CDN -> API.
     -- Anything other than 'qbox' stays on Fivemanage, so a typo never quietly moves your media.
-    Provider = 'fivemanage',
+    Provider = 'mainframe', -- [mainframe] notre hébergement (convars phone_image_*), voir PATCHES.md
 
     -- Folder your Fivemanage Media token is scoped to, if any (e.g. 'myserver/prod'). Uploads made
     -- with a folder-scoped token come back as <CDN>/<team>/<folder>/<name>, and the direct-upload
@@ -95,9 +95,9 @@ return {
         WindowMinutes = 10,    -- length of the rolling window the next three use
         PlayerMB      = 200,   -- MB one account may upload per window
         PlayerUploads = 120,   -- uploads one account may make per window, whatever their size
-        PlayerDailyMB = 2048,  -- MB one account may upload per day (UTC); survives restarts. 0 = off
+        PlayerDailyMB = 512,   -- [mainframe] 2048 en vanilla ; disque du VPS takehost02. MB one account may upload per day (UTC); survives restarts. 0 = off
         ServerMB      = 3072,  -- MB the WHOLE server may upload per window, however many players. 0 = off
-        ServerDailyMB = 20480, -- MB the WHOLE server may upload per day (UTC); survives restarts. 0 = off
+        ServerDailyMB = 4096,  -- [mainframe] 20480 en vanilla ; disque du VPS takehost02. MB the WHOLE server may upload per day (UTC); survives restarts. 0 = off
     },
 
     -- Logs each capture upload to the server console: the size, the slice count, how long it
@@ -131,6 +131,7 @@ return {
         '*.imgur.com',
         '*.discordapp.com', '*.discordapp.net', -- note: Discord attachment links expire after roughly a day
         '*.fivemanage.com',
+        'takehost02.jujuland.net', -- [mainframe] notre hébergement de médias
         '*.ibb.co',
         '*.postimg.cc',
         '*.gyazo.com',

@@ -64,6 +64,13 @@ end
 ---@return table verdict { allowed: boolean, messageKey?: string, message?: string, messageVars?: table }
 function actions.canTune(src, freq)
     freq = clampFreq(freq)
+    -- PATCH MAISON : les bandes réservées sont réglées au Config Panel de
+    -- mainframe (module `radio`), qui les garde aussi côté pma-voice. La liste
+    -- RestrictedRanges ci-dessous ne sert plus que de repli sans mainframe.
+    if GetResourceState('mainframe') == 'started' then
+        local ok, verdict = pcall(function() return exports.mainframe:RadioCanTune(src, freq) end)
+        if ok and type(verdict) == 'table' then return verdict end
+    end
     local ranges = config.Radio and config.Radio.RestrictedRanges
     if not ranges or #ranges == 0 then return { allowed = true } end
 

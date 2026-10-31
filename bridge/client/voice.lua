@@ -83,7 +83,9 @@ end
 ---@return boolean handled
 function voice.setRadioChannel(channel)
     if not RESOURCE then return false end
-    channel = math.floor(tonumber(channel) or 0)
+    -- PATCH MAISON : arrondi au dixième et non à l'entier, le canal porte la
+    -- décimale de la fréquence (cf client/apps/radio.lua).
+    channel = math.floor((tonumber(channel) or 0) * 10 + 0.5) / 10
 
     if PROVIDER == 'saltychat' then
         if channel <= 0 then

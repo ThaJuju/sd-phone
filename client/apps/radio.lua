@@ -9,7 +9,10 @@ local function freqToChannel(freq)
     local f = tonumber(freq) or 0
     if f < 1.0 then return 0 end
     if f > 999.9 then f = 999.9 end
-    return lib.math.round(f * 10)
+    -- PATCH MAISON : canal = la fréquence elle-même (une décimale), pour que
+    -- pma-voice affiche « 132.9 Mhz » et non « 1329 Mhz ». Même calcul que
+    -- mainframe/modules/radio/shared.lua (dixièmes puis / 10) : même double.
+    return lib.math.round(f * 10) / 10
 end
 
 -- Live session state, seeded from the player's saved prefs on first read. `standby` = left the

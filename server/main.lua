@@ -17,8 +17,12 @@ local util      = require 'server.util'
 -- the promise until ox_lib's timeout instead of showing an error.
 do
     local register = lib.callback.register
+    -- PATCH MAISON (mainframe) : garde téléphone / appli désactivée / actions bloquées. Voir PATCHES.md.
+    local mainframeGate = require 'server.mainframe_gate'
     lib.callback.register = function(name, handler)
         return register(name, function(...)
+            local refusal = mainframeGate.check(name, ...)
+            if refusal then return refusal end
             local results = table.pack(pcall(handler, ...))
             if results[1] then return table.unpack(results, 2, results.n) end
             print(('^1[sd-phone] callback %s failed: %s^0'):format(tostring(name), tostring(results[2])))
@@ -59,6 +63,7 @@ require 'server.pages.init'
 require 'server.weazelnews.init'
 require 'server.banking.init'
 require 'server.services.init'
+require 'server.mainframe_duty' -- PATCH MAISON (mainframe) : service F6 → appli Services, voir PATCHES.md
 require 'server.voicememos.init'
 require 'server.callrec.init'
 require 'server.voicemail.init'

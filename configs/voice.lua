@@ -24,7 +24,7 @@ return {
 
     -- Master switch. When false, recordings carry only the recorder's own voice. Note:
     -- capturing other players' microphones may have privacy implications on your server.
-    RecordNearbyVoices = true,
+    RecordNearbyVoices = false,
 
     -- Metres - how close another player must be to be captured.
     NearbyRange        = 12.0,

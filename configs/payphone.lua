@@ -7,7 +7,7 @@ return {
     Enabled = true,
 
     -- Console prints through the booth interaction/prop-swap path, for debugging.
-    Debug = true,
+    Debug = false,
 
     -- When true the callee sees a withheld caller ("Payphone") instead of the booth's number.
     Anonymous = false,

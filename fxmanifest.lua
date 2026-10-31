@@ -22,6 +22,7 @@ server_scripts {
     'server/crypto.js',
     'server/relay.js',
     'server/upload.js',
+    'server/mainframe_upload.js', -- PATCH MAISON (mainframe) : fournisseur de médias, voir PATCHES.md
     'bridge/server/init.lua',
     'server/main.lua',
 }
