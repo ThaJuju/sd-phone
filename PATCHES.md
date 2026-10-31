@@ -272,5 +272,5 @@ Il récupère `auralys` et remplace le dossier par son contenu dans un seul comm
 les crochets de `[standalone]` cassent sa recherche du dernier import.
 
 Ne jamais modifier directement `resources/[standalone]/sd-phone` dans esxbase : la
-modification serait écrasée ou en conflit au prochain `subtree pull`. La clé
+modification serait écrasée à la prochaine synchronisation. La clé
 `.secret` (ignorée) n'est jamais committée, ni dans esxbase ni dans le fork public.
