@@ -243,6 +243,9 @@ Pièges :
   because the document's frame is sandboxed » à la création du lecteur : FiveM
   tente d'injecter son script dans l'iframe, la sandbox le bloque. Normal et voulu,
   ne **jamais** ajouter `allow-scripts`.
+- Côté propriétaire, la console peut afficher « [DOM] Password field is not
+  contained in a form » : simple conseil de Chrome sur un champ mot de passe de
+  l'interface amont, sans lien avec le partage et sans effet.
 
 Mesuré dans un navigateur (sans réseau) : 70 à 160 ms entre l'action du
 propriétaire et son affichage chez le spectateur, à quoi s'ajoute en jeu le
@@ -250,8 +253,8 @@ trajet propriétaire → serveur → spectateur.
 Restent vides chez le spectateur : iframes d'autres ressources (applis
 personnalisées comme Snapmatic), canvas (caméra, jeux en canvas). Testé dans un
 navigateur (build démo, deux pages, flux relayé à la main). Première version
-essayée en jeu (retard de ≈ 5 s, corrigé ci-dessous) ; la correction n'est
-mesurée que dans le navigateur.
+essayée en jeu (retard de ≈ 5 s, corrigé ci-dessous), correction validée en jeu
+le 2026-11-01.
 
 ## Hors de cette ressource
 
