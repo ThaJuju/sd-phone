@@ -256,6 +256,43 @@ navigateur (build démo, deux pages, flux relayé à la main). Première version
 essayée en jeu (retard de ≈ 5 s, corrigé ci-dessous), correction validée en jeu
 le 2026-11-01.
 
+## 9. Téléphones uniques : les données suivent l'objet téléphone
+
+**Besoin** : qui récupère le téléphone d'un autre joueur (vol, fouille, objet
+trouvé) voit ses messages, appels, contacts, photos, applis installées.
+
+**Réglage** (fonction native de sd-phone, `configs/uniqueandsim.lua`) :
+`Enabled = true`, `DataOwner = 'device'`, `BuiltInNumbers = true`. Chaque objet
+`phone_*` reçoit à sa première utilisation une identité (`device:<id>`) et son
+propre numéro, écrits dans ses métadonnées ox_inventory ; toutes ses données sont
+rangées sous cette identité. Pas d'objet SIM. Le code de verrouillage protège le
+téléphone ; Face ID ne déverrouille que pour son premier propriétaire. Sauvegarde
+cloud (par personnage, mot de passe) pour retrouver ses données sur un autre
+téléphone.
+
+Mise en service sur le serveur de **développement**, sans migration : les
+données antérieures (rangées par personnage) restent en base mais ne sont plus
+affichées, chaque téléphone repart vierge avec un nouveau numéro. Pour un
+serveur avec des joueurs, il faudrait d'abord écrire dans chaque téléphone
+porté le numéro actuel de son personnage (`simNumber`), que sd-phone sait
+adopter.
+
+| Fichier | Nature |
+|---|---|
+| `configs/uniqueandsim.lua` | **modifié** — les trois réglages ci-dessus |
+| `server/auralys_identity.lua` | **nouveau** — exports `getPhoneIdentity(source)` et `getSourceByPhoneIdentity(identity)` pour les ressources externes |
+| `fxmanifest.lua` | **modifié** — le script ci-dessus |
+
+Hors de cette ressource, adaptés en même temps :
+
+- `sd-snapmatic` : comptes rangés sous l'identité du téléphone actif (au lieu de
+  l'identifiant ESX), joueur à notifier retrouvé par
+  `getSourceByPhoneIdentity`, flammes versées à qui tient le téléphone.
+- `mainframe/modules/character_wipe` : accepte le mode `device` (§ 7) et efface
+  aussi les sauvegardes cloud du personnage.
+- `mainframe` (numéro, factures, dispatch, prise de service) et `sd-tictactoe`
+  n'ont rien à changer : ils passent par la session du joueur.
+
 ## Hors de cette ressource
 
 - **Items** : `phone_black` … `phone_yellow` déclarés dans

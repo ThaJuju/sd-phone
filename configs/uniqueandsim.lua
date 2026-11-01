@@ -39,21 +39,21 @@
 return {
     -- Master switch. Off = sd-phone behaves exactly as before (numbers auto-assigned per
     -- character, phone always has service).
-    Enabled = false,
+    Enabled = true, -- PATCH MAISON : téléphones uniques, voir PATCHES.md § 9
 
     -- Where the phone DATA lives: 'device' | 'sim' | 'character' (see the header above).
     -- Flipping an existing 'sim' server to 'device' is safe: on first use each phone ADOPTS the
     -- identity of the SIM currently in it (grandfathering, no data copied or lost), and only
     -- from then on does the number float free of the data. (The pre-DataOwner boolean
     -- `DeviceIdentity` is still honoured when this key is absent.)
-    DataOwner = 'sim',
+    DataOwner = 'device', -- PATCH MAISON : les données suivent l'objet téléphone
 
     -- Unique phones WITHOUT SIM cards ("eSIM"): every phone mints its own permanent number the
     -- first time it is used - no sim_card item, no install/eject, the number lives and dies
     -- with the phone. Pairs with DataOwner 'device' or 'character' ('sim' has no SIM identity
     -- to own data and coerces to 'device'); forces the metadata attach mode. SimItem, SimTray,
     -- AllowEject, ActivateBlankSims and /givesim become inert.
-    BuiltInNumbers = false,
+    BuiltInNumbers = true, -- PATCH MAISON : numéro propre à chaque téléphone, pas d'objet SIM
 
     -- Inventory item that carries a phone number in its metadata ({ number = '2075550123' }).
     -- Sell or spawn it anywhere like a normal item: a blank card self-activates on first use.

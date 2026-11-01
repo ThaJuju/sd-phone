@@ -27,6 +27,7 @@ server_scripts {
     'bridge/server/init.lua',
     'server/main.lua',
     'server/auralys_screenview.lua', -- PATCH MAISON : regarder le téléphone d'un autre joueur, voir PATCHES.md § 8
+    'server/auralys_identity.lua', -- PATCH MAISON : identité du téléphone pour les ressources externes, voir PATCHES.md § 9
     'server/compat/computers.lua', -- sd-computers link (optional; inert unless sd-computers calls it)
 }
 
