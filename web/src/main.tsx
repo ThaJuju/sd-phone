@@ -49,3 +49,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </ErrorBoundary>
     </React.StrictMode>,
 );
+
+// PATCH MAISON : regarder le téléphone d'un autre joueur, voir PATCHES.md § 8.
+import('@/auralys/screenview/mount');

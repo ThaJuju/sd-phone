@@ -5168,6 +5168,14 @@
     "yourVehicle": "Ton véhicule",
     "yourVehicles": "Tes véhicules"
   },
+  "screenview": {
+    "connecting": "Connexion…",
+    "stop": "Arrêter",
+    "stopHint": "Retour arrière : arrêter de regarder",
+    "wantsToSee": "{name} aimerait voir l'écran de ton téléphone",
+    "watchedBy": "{name} regarde ton écran",
+    "watchedMany": "{count} personnes regardent ton écran"
+  },
   "services": {
     "accept": "Accepter",
     "actions": "Actions",

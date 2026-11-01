@@ -63,6 +63,7 @@ local function kindLabel(kind)
     if kind == 'signature-request' then return 'signature request' end
     if kind == 'id-card' then return 'ID card' end
     if kind == 'photogram-profile' then return 'Photogram profile' end
+    if kind == 'screen' then return "partage d'écran" end -- PATCH MAISON : voir PATCHES.md § 8
     return 'contact'
 end
 
@@ -97,6 +98,8 @@ local function nameFor(viewerSrc, subjectSrc)
     if numberDigits ~= '' then return util.formatNumber(number) end
     return player.getName(subjectSrc)
 end
+
+core.nameFor = nameFor -- PATCH MAISON : nom affiché du spectateur (server/auralys_screenview.lua), voir PATCHES.md § 8
 
 ---Drops every expired pending request, tallying what survives for the pair about to be checked
 ---in the same walk so the caps never cost a second pass over the table.

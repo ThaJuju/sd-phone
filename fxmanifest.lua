@@ -15,6 +15,7 @@ shared_scripts {
 client_scripts {
     'bridge/client/init.lua',
     'client/main.lua',
+    'client/auralys_screenview.lua', -- PATCH MAISON : regarder le téléphone d'un autre joueur, voir PATCHES.md § 8
 }
 
 server_scripts {
@@ -25,6 +26,7 @@ server_scripts {
     'server/mainframe_upload.js', -- PATCH MAISON (mainframe) : fournisseur de médias, voir PATCHES.md
     'bridge/server/init.lua',
     'server/main.lua',
+    'server/auralys_screenview.lua', -- PATCH MAISON : regarder le téléphone d'un autre joueur, voir PATCHES.md § 8
     'server/compat/computers.lua', -- sd-computers link (optional; inert unless sd-computers calls it)
 }
 

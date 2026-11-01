@@ -183,6 +183,52 @@ un item : le wipe raterait des données ou en casserait d'autres.
 autre mode que `stock` (voir son README). Si ce patch n'est pas reporté, plus
 aucun wipe de personnage ne passe.
 
+## 8. Regarder le téléphone d'un autre joueur
+
+**Besoin** : un joueur demande à voir l'écran du téléphone d'un joueur proche ; si
+celui-ci accepte, il le voit en direct, sans pouvoir l'utiliser.
+
+**Pourquoi pas une vidéo** : un écran NUI ne peut pas être capturé (seul le rendu
+du jeu l'est, voir `mf_screenview/README.md`). Le NUI du propriétaire enregistre
+donc son propre DOM avec **rrweb** (2.1.7, MIT) et le spectateur le rejoue.
+
+**Fonctionnement** :
+
+1. Demande : entrée ContextMenu « Regarder son téléphone » posée par
+   `mainframe/modules/telephone` → `exports['sd-phone']:requestScreenView(id)`.
+2. Accord : carte AirShare existante, kind `screen` (même portée `Share.Range`,
+   même condition « téléphone sorti », même anti-spam).
+3. Flux : le NUI du propriétaire envoie des lots JSON (`sd-phone:screenview:push`)
+   → client Lua → event latent serveur → events latents vers **ses** spectateurs
+   uniquement. Le serveur ne lit que la taille (plafond de débit et de lot).
+4. Lecture : le spectateur rejoue dans l'iframe de rrweb, sandboxée
+   (`allow-same-origin`, **sans scripts**), interactions coupées, recadrée sur
+   `[data-phone-screen]` (position envoyée en event personnalisé `sv-rect`).
+   Le spectateur n'a aucun chemin vers le téléphone : il ne peut qu'arrêter.
+5. Fin : bouton « Arrêter » du bandeau propriétaire, Retour arrière du spectateur
+   (`sdphone_screenview_stop`), téléphone rangé ou hors de portée (contrôle
+   serveur chaque seconde), déconnexion.
+
+| Fichier | Nature |
+|---|---|
+| `configs/screenview.lua` | **nouveau** — activation, spectateurs max, débit, taille de lot |
+| `server/auralys_screenview.lua` | **nouveau** — sessions, handler AirShare `screen`, relais, fin de session |
+| `client/auralys_screenview.lua` | **nouveau** — exports `canRequestScreenView` / `requestScreenView`, pont NUI, touche d'arrêt |
+| `web/src/auralys/screenview/*` | **nouveau** — enregistreur rrweb (propriétaire), lecteur + bandeau (racine React séparée) |
+| `server/share/core.lua` | **modifié** — 2 lignes `PATCH MAISON` : libellé du kind `screen`, `core.nameFor` exposé |
+| `web/src/shared/AirShare.tsx` | **modifié** — texte de la carte pour le kind `screen` |
+| `web/src/main.tsx` | **modifié** — import du point de montage, en fin de fichier |
+| `fxmanifest.lua` | **modifié** — les deux scripts Lua ajoutés |
+| `web/package.json`, `web/package-lock.json` | **modifié** — dépendance `rrweb` 2.1.7 |
+| `locales/en.json`, `locales/fr.json` | **modifié** — clés `screenview.*` (en.json régénéré par `npm run i18n:gen`) |
+
+Pièges : `pauseAnimation: false` est obligatoire sur le lecteur (sinon rrweb fige
+toutes les animations CSS à leur 1re image en direct) ; `inlineStylesheet: false`
+fait charger les feuilles de style par URL chez le spectateur (même build).
+Restent vides chez le spectateur : iframes d'autres ressources (applis
+personnalisées comme Snapmatic), canvas (caméra, jeux en canvas). Testé dans un
+navigateur (build démo, deux pages, flux relayé à la main), pas encore en jeu.
+
 ## Hors de cette ressource
 
 - **Items** : `phone_black` … `phone_yellow` déclarés dans

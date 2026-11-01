@@ -60,7 +60,10 @@ export function AirShareCard({ request, onRespond }: {
         : request.kind === 'photo' ? t('common.aPhoto', 'a photo')
         : request.kind === 'id-card' ? t('common.anIdCard', 'an ID card')
         : t('common.aContact', 'a contact');
-    const message = request.kind === 'signature-request'
+    // PATCH MAISON : demande « Regarder le téléphone », voir PATCHES.md § 8.
+    const message = request.kind === 'screen'
+        ? t('screenview.wantsToSee', '{name} would like to see your phone screen', { name: request.fromName })
+        : request.kind === 'signature-request'
         ? t('common.asksYouToSign', '{name} asks you to sign a document', { name: request.fromName })
         : request.kind === 'photogram-profile'
             ? (request.detail

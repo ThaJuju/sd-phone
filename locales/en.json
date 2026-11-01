@@ -2388,6 +2388,11 @@
     "usernameMustLeast2Characters": "Username must be at least 2 characters",
     "voiceMemo": "Voice Memo"
   },
+  "mainframe": {
+    "appDisabled": "Cette application est désactivée.",
+    "blocked": "Action indisponible depuis le téléphone.",
+    "noPhone": "Vous n'avez pas de téléphone sur vous."
+  },
   "maps": {
     "accept": "Accept",
     "add": "Add",
@@ -5292,6 +5297,14 @@
     "tomorrow": "Tomorrow",
     "tooFar": "Pick a time within the next 30 days.",
     "tooSoon": "Pick a time at least 5 minutes from now."
+  },
+  "screenview": {
+    "connecting": "Connecting…",
+    "stop": "Stop",
+    "stopHint": "Backspace: stop watching",
+    "wantsToSee": "{name} would like to see your phone screen",
+    "watchedBy": "{name} is watching your screen",
+    "watchedMany": "{count} people are watching your screen"
   },
   "search": {
     "rateLimited": "Searching too fast, try again in a moment"
