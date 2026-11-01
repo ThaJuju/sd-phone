@@ -15,7 +15,7 @@ local cfg   = require 'configs.screenview'
 local share = require 'configs.share'
 
 local viewing = false
-local recordBps = 160000
+local transferBps = 2000000
 
 local function notify(description, kind)
     lib.notify({ title = 'Téléphone', description = description, type = kind or 'inform' })
@@ -86,7 +86,7 @@ RegisterKeyMapping('sdphone_screenview_stop', 'Arrêter de regarder un télépho
 
 RegisterNetEvent('sd-phone:client:screenview:recordStart', function(data)
     if type(data) ~= 'table' then return end
-    recordBps = tonumber(data.bytesPerSecond) or recordBps
+    transferBps = tonumber(data.transferBytesPerSecond) or transferBps
     SendNUIMessage({ action = 'sd-phone:screenview:recordStart', data = data })
 end)
 
@@ -102,7 +102,7 @@ end)
 RegisterNUICallback('sd-phone:screenview:push', function(payload, cb)
     cb({ ok = true })
     if type(payload) ~= 'table' or type(payload.d) ~= 'string' then return end
-    TriggerLatentServerEvent('sd-phone:server:screenview:push', recordBps, payload.d)
+    TriggerLatentServerEvent('sd-phone:server:screenview:push', transferBps, payload.d)
 end)
 
 RegisterNUICallback('sd-phone:screenview:stop', function(_, cb)

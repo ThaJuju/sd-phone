@@ -16,8 +16,6 @@ interface OwnerState { viewerName: string; count: number }
 
 const META = 4;
 const CUSTOM = 5;
-// Retard de lecture absorbé : sans lui, chaque lot arrivé un peu tard se jouerait d'un coup.
-const LIVE_BUFFER_MS = 400;
 
 function isRectEvent(e: eventWithTime): Rect | null {
     if (e.type !== CUSTOM) return null;
@@ -37,6 +35,7 @@ export function ScreenViewLayer() {
     const hostRef = useRef<HTMLDivElement>(null);
     const replayerRef = useRef<Replayer | null>(null);
     const pendingRef = useRef<eventWithTime[] | null>(null);
+    const creatingRef = useRef(false);
     const sessionRef = useRef(0);
 
     const teardown = useCallback(() => {
@@ -44,37 +43,26 @@ export function ScreenViewLayer() {
         try { replayerRef.current?.destroy(); } catch { /* déjà détruit */ }
         replayerRef.current = null;
         pendingRef.current = null;
+        creatingRef.current = false;
         if (hostRef.current) hostRef.current.innerHTML = '';
         setRect(null);
     }, []);
 
-    const feed = useCallback((events: eventWithTime[]) => {
-        for (const e of events) {
-            const r = isRectEvent(e);
-            if (r) setRect(r);
-        }
-
-        const replayer = replayerRef.current;
-        if (replayer) {
-            for (const e of events) replayer.addEvent(e);
-            return;
-        }
-
-        // Rien n'est rejouable avant le premier état complet (Meta puis FullSnapshot).
-        if (pendingRef.current === null) {
-            const start = events.findIndex(e => e.type === META);
-            if (start === -1) return;
-            pendingRef.current = events.slice(start);
-        } else {
-            pendingRef.current.push(...events);
-            return;
-        }
-
+    // Lecteur neuf à chaque état complet : rrweb garde en mémoire tous les events reçus,
+    // le propriétaire en renvoie un régulièrement pour borner cette mémoire. L'ancien
+    // lecteur reste affiché jusqu'à ce que le nouveau soit prêt.
+    const createReplayer = useCallback(() => {
+        if (creatingRef.current) return;
+        creatingRef.current = true;
         const session = sessionRef.current;
         void import('rrweb').then(({ Replayer }) => {
+            if (session !== sessionRef.current) return;
+            creatingRef.current = false;
             const host = hostRef.current;
             const pending = pendingRef.current;
-            if (session !== sessionRef.current || !host || !pending?.length) return;
+            if (!host || !pending?.length) return;
+            try { replayerRef.current?.destroy(); } catch { /* déjà détruit */ }
+            host.innerHTML = '';
             const created = new Replayer([], {
                 root: host,
                 liveMode: true,
@@ -87,12 +75,41 @@ export function ScreenViewLayer() {
                 // retirer : les animations CSS (entrées en fondu) resteraient figées à leur 1re image.
                 pauseAnimation: false,
             });
-            created.startLive(pending[0].timestamp - LIVE_BUFFER_MS);
+            // Les events reçus avant cet instant sont joués d'un coup, les suivants dès leur arrivée.
+            created.startLive(Date.now());
             for (const e of pending) created.addEvent(e);
             replayerRef.current = created;
             pendingRef.current = null;
         });
     }, []);
+
+    const feed = useCallback((incoming: eventWithTime[]) => {
+        // Chaque event est daté de son ARRIVÉE, pas de l'horloge du propriétaire : rrweb planifie
+        // le direct par rapport au premier état reçu, si bien que le temps de transfert de cet
+        // état (souvent plusieurs secondes) devenait un retard permanent sur tout le reste.
+        const now = Date.now();
+        const events = incoming.map(e => ({ ...e, timestamp: now }) as eventWithTime);
+
+        for (const e of events) {
+            const r = isRectEvent(e);
+            if (r) setRect(r);
+        }
+
+        // Rien n'est rejouable sans un état complet (Meta puis FullSnapshot) ; ce qui le
+        // précède dans le lot appartient à l'état remplacé.
+        const metaAt = events.findIndex(e => e.type === META);
+        if (metaAt !== -1) {
+            pendingRef.current = events.slice(metaAt);
+            createReplayer();
+            return;
+        }
+        if (pendingRef.current) {
+            pendingRef.current.push(...events);
+            return;
+        }
+        const replayer = replayerRef.current;
+        if (replayer) for (const e of events) replayer.addEvent(e);
+    }, [createReplayer]);
 
     useEffect(() => {
         const onMessage = (event: MessageEvent) => {

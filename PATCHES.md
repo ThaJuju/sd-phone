@@ -222,12 +222,36 @@ donc son propre DOM avec **rrweb** (2.1.7, MIT) et le spectateur le rejoue.
 | `web/package.json`, `web/package-lock.json` | **modifié** — dépendance `rrweb` 2.1.7 |
 | `locales/en.json`, `locales/fr.json` | **modifié** — clés `screenview.*` (en.json régénéré par `npm run i18n:gen`) |
 
-Pièges : `pauseAnimation: false` est obligatoire sur le lecteur (sinon rrweb fige
-toutes les animations CSS à leur 1re image en direct) ; `inlineStylesheet: false`
-fait charger les feuilles de style par URL chez le spectateur (même build).
+Pièges :
+
+- `pauseAnimation: false` est obligatoire sur le lecteur, sinon rrweb fige toutes
+  les animations CSS à leur 1re image en direct.
+- Le spectateur **re-date chaque event à son arrivée** et ignore l'horloge du
+  propriétaire : le direct de rrweb planifie tout par rapport au premier état
+  reçu, si bien que son temps de transfert devenait un retard permanent
+  (≈ 5 s constatés en jeu).
+- Budget en seau côté propriétaire (réserve de 4 s de `BytesPerSecond`) : une
+  ouverture d'appli insère 50 à 200 Ko de DOM d'un coup ; avec une fenêtre fixe
+  d'une seconde, ce lot était jeté puis remplacé par un état complet, ½ s plus tard.
+- Events latents envoyés à `TransferBytesPerSecond` (2 Mo/s), distinct du débit
+  moyen : un état complet doit passer d'un bloc.
+- État complet toutes les 3 min (`checkoutEveryNms`) et lecteur recréé à chaque
+  état complet : rrweb garde en mémoire tout ce qu'il a rejoué.
+- `inlineStylesheet: false` fait charger les feuilles de style par URL chez le
+  spectateur (même build).
+- La console NUI du spectateur affiche « Blocked script execution in 'about:blank'
+  because the document's frame is sandboxed » à la création du lecteur : FiveM
+  tente d'injecter son script dans l'iframe, la sandbox le bloque. Normal et voulu,
+  ne **jamais** ajouter `allow-scripts`.
+
+Mesuré dans un navigateur (sans réseau) : 70 à 160 ms entre l'action du
+propriétaire et son affichage chez le spectateur, à quoi s'ajoute en jeu le
+trajet propriétaire → serveur → spectateur.
 Restent vides chez le spectateur : iframes d'autres ressources (applis
 personnalisées comme Snapmatic), canvas (caméra, jeux en canvas). Testé dans un
-navigateur (build démo, deux pages, flux relayé à la main), pas encore en jeu.
+navigateur (build démo, deux pages, flux relayé à la main). Première version
+essayée en jeu (retard de ≈ 5 s, corrigé ci-dessous) ; la correction n'est
+mesurée que dans le navigateur.
 
 ## Hors de cette ressource
 

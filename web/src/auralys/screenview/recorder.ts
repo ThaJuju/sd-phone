@@ -27,9 +27,13 @@ let stopRecording: (() => void) | undefined;
 let flushTimer: number | undefined;
 let rectTimer: number | undefined;
 let queue: eventWithTime[] = [];
-let opts: RecordOptions = { bytesPerSecond: 160000, maxBatchBytes: 1500000, flushMs: 150 };
-let windowStart = 0;
-let windowBytes = 0;
+let opts: RecordOptions = { bytesPerSecond: 160000, maxBatchBytes: 1500000, flushMs: 100 };
+// Budget en seau : il se remplit au débit moyen et se vide à chaque envoi. Sa réserve
+// (BURST_SECONDS de débit) laisse passer d'un coup l'ouverture d'une appli, qui insère
+// souvent plus de 150 Ko de DOM ; seul un excès qui dure fait sauter des lots.
+const BURST_SECONDS = 4;
+let tokens = 0;
+let lastRefill = 0;
 let needSnapshot = false;
 let lastRect = '';
 
@@ -51,32 +55,29 @@ function pushRect(force: boolean) {
 
 function flush() {
     const now = performance.now();
-    if (now - windowStart >= 1000) {
-        windowStart = now;
-        windowBytes = 0;
-        // Un lot sauté laisse les spectateurs sur un DOM faux : seul un état complet le répare.
-        if (needSnapshot && rrweb) {
-            needSnapshot = false;
-            queue = [];
-            rrweb.record.takeFullSnapshot(true);
-            pushRect(true);
-        }
+    const capacity = opts.bytesPerSecond * BURST_SECONDS;
+    tokens = Math.min(capacity, tokens + (now - lastRefill) / 1000 * opts.bytesPerSecond);
+    lastRefill = now;
+
+    // Un lot sauté laisse les spectateurs sur un DOM faux : seul un état complet le répare,
+    // envoyé dès que la réserve s'est assez reconstituée.
+    if (needSnapshot && rrweb && tokens >= capacity / 2) {
+        needSnapshot = false;
+        queue = [];
+        rrweb.record.takeFullSnapshot(true);
+        pushRect(true);
     }
     if (queue.length === 0) return;
 
-    // Le plafond laisse passer un état complet, plus gros que le débit d'une seconde.
     const isSnapshot = queue.some(e => e.type === FULL_SNAPSHOT);
     const data = JSON.stringify(queue);
     queue = [];
-    if (data.length > opts.maxBatchBytes) {
+    if (data.length > opts.maxBatchBytes || (!isSnapshot && data.length > tokens)) {
         needSnapshot = true;
         return;
     }
-    if (!isSnapshot && windowBytes + data.length > opts.bytesPerSecond) {
-        needSnapshot = true;
-        return;
-    }
-    windowBytes += data.length;
+    // Un état complet passe toujours (il répare tout) ; la réserve peut devenir négative.
+    tokens -= data.length;
     void fetchNui('sd-phone:screenview:push', { d: data });
 }
 
@@ -92,8 +93,8 @@ export async function startRecording(options: Partial<RecordOptions>): Promise<v
 
     rrweb = rrweb ?? await import('rrweb');
     queue = [];
-    windowStart = performance.now();
-    windowBytes = 0;
+    tokens = opts.bytesPerSecond * BURST_SECONDS;
+    lastRefill = performance.now();
     needSnapshot = false;
     lastRect = '';
 
@@ -108,6 +109,9 @@ export async function startRecording(options: Partial<RecordOptions>): Promise<v
         recordCrossOriginIframes: false,
         slimDOMOptions: 'all',
         maskInputOptions: { password: true },
+        // État complet régulier : borne la mémoire du lecteur (voir ScreenViewLayer) et
+        // rattrape un spectateur dont un lot se serait perdu.
+        checkoutEveryNms: 180000,
         sampling: {
             mousemove: false,
             mouseInteraction: false,

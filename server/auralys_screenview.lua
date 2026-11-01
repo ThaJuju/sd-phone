@@ -71,7 +71,8 @@ local function startSession(owner, viewer)
         viewerName     = share.nameFor(owner, viewer),
         count          = session.count,
         bytesPerSecond = tonumber(cfg.BytesPerSecond) or 160000,
-        flushMs        = tonumber(cfg.FlushMs) or 150,
+        flushMs        = tonumber(cfg.FlushMs) or 100,
+        transferBytesPerSecond = tonumber(cfg.TransferBytesPerSecond) or 2000000,
         maxBatchBytes  = tonumber(cfg.MaxBatchBytes) or 1500000,
     })
     return true
@@ -129,8 +130,9 @@ RegisterNetEvent('sd-phone:server:screenview:push', function(data)
     -- Marge d'un état complet de l'écran, qui dépasse à lui seul le débit d'une seconde.
     if session.bytes > bps + (tonumber(cfg.MaxBatchBytes) or 1500000) then return end
 
+    local transfer = tonumber(cfg.TransferBytesPerSecond) or 2000000
     for viewer in pairs(session.viewers) do
-        TriggerLatentClientEvent('sd-phone:client:screenview:data', viewer, bps, data)
+        TriggerLatentClientEvent('sd-phone:client:screenview:data', viewer, transfer, data)
     end
 end)
 
