@@ -74,7 +74,7 @@ Les actions de patron et de multi-job de l'appli Services
 ## 3. Hébergement des médias : fournisseur « mainframe » (à la place de Fivemanage)
 
 Photos, vidéos, notes vocales, pièces jointes audio, messagerie vocale et
-enregistrements d'appels sont envoyés sur **notre VPS `takehost02.jujuland.net`**
+enregistrements d'appels sont envoyés sur **notre VPS takehost02, `cdn-tk02.auralysrp.net`**
 (vhost nginx WebDAV, espace `/phone/`) et non sur Fivemanage. Tous les envois de
 sd-phone passent par `uploader.uploadMedia` : un seul aiguillage suffit.
 
@@ -84,7 +84,7 @@ sd-phone passent par `uploader.uploadMedia` : un seul aiguillage suffit.
 | `server/mainframe_media.lua` | **nouveau** — fournisseur côté Lua (même contrat que `server/photos/qbox.lua` : ticket, rappel unique, délai max 90 s) |
 | `server/mainframe_upload.js` | **nouveau** — transfert en Node : décode le base64, déduit l'extension des **octets** (jamais du type annoncé), nomme `<img\|vid\|aud>/<32 hex>.<ext>` au hasard, `PUT` en Basic auth, borne 25 Mo |
 | `fxmanifest.lua` | **modifié** — 1 ligne : `server/mainframe_upload.js` dans `server_scripts` |
-| `configs/photos.lua` | `Provider = 'mainframe'` ; `takehost02.jujuland.net` dans `ImportAllowlist` ; `PlayerDailyMB` 2048 → 512 et `ServerDailyMB` 20480 → 4096 (disque du VPS : ~88 Go libres) |
+| `configs/photos.lua` | `Provider = 'mainframe'` ; `cdn-tk02.auralysrp.net` dans `ImportAllowlist` ; `PlayerDailyMB` 2048 → 512 et `ServerDailyMB` 20480 → 4096 (disque du VPS : ~88 Go libres) |
 
 Convars **serveur** (jamais `setr`), même contrat que `mainframe/shared/uploads.lua`,
 dans `image-upload.private.cfg` (ignoré par git) :
@@ -93,21 +93,23 @@ dans `image-upload.private.cfg` (ignoré par git) :
 ne s'enregistre (le message d'origine de sd-phone parle alors de « Fivemanage »,
 ne pas s'y fier).
 
-Côté VPS (mis en place et vérifié le 2026-09-23) :
+Côté VPS (mis en place le 2026-09-23, VM réinstallée et nom changé le 2026-11-06 ;
+config nginx versionnée dans esxbase, `services/cdn-tk02/`) :
 
 | | |
 |---|---|
-| Envoi | `PUT https://takehost02.jujuland.net/upload/phone/(img\|vid\|aud)/<32 hex>.<ext>`, compte dédié `phone` (`/etc/nginx/.htpasswd-phone-upload`), ≤ 25 Mo, anti-rafale `phone_upload` (10 r/s) |
-| Lecture | `GET https://takehost02.jujuland.net/phone/…`, publique, `immutable` 7 j, `noindex`, `Access-Control-Allow-Origin: *` (l'UI charge certaines images en `crossOrigin`), plages d'octets (206) pour la vidéo |
+| Envoi | `PUT https://cdn-tk02.auralysrp.net/upload/phone/(img\|vid\|aud)/<32 hex>.<ext>`, compte dédié `phone` (`/etc/nginx/.htpasswd-phone-upload`), ≤ 25 Mo, anti-rafale 10 r/s (rafale 20) |
+| Lecture | `GET https://cdn-tk02.auralysrp.net/phone/…`, publique, `immutable` 7 j, `noindex`, `Access-Control-Allow-Origin: *` (l'UI charge certaines images en `crossOrigin`), plages d'octets (206) pour la vidéo |
 | Extensions | `jpg png gif webp webm mp4 m4a ogg mp3 wav` — tout autre nom : 403 |
 | Stockage | `/var/www/phone-media/` — **données personnelles** (photos, voix) : toute purge porte sur ce répertoire seul |
-| Sauvegarde du vhost avant modification | `/etc/nginx/sites-available/takehost02.jujuland.net.bak-20260923-213920` |
 
 Vérifié avec `server/mainframe_upload.js` exécuté tel quel sous Node : JPEG et
 WebM acceptés (201) et relus à l'identique, HTML refusé avant envoi, mauvais mot
 de passe → 401 ; puis par curl : sans auth 401, nom ou extension invalide 403,
 compte `phone` sur l'espace MDT 401, DELETE 403, traversée encodée 400, listing
-404.
+404. Revérifié par curl après la réinstallation (2026-11-06) : envoi WebM 201,
+lecture partielle 206, compte `mdt` sur l'espace téléphone 401 ; un listing répond
+désormais 403 et une traversée encodée 404 (normalisée hors des espaces).
 
 Limite : supprimer une photo dans le téléphone ne supprime que la ligne en base,
 pas le fichier (comportement d'origine, identique avec Fivemanage).

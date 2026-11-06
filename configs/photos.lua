@@ -131,7 +131,7 @@ return {
         '*.imgur.com',
         '*.discordapp.com', '*.discordapp.net', -- note: Discord attachment links expire after roughly a day
         '*.fivemanage.com',
-        'takehost02.jujuland.net', -- [mainframe] notre hébergement de médias
+        'cdn-tk02.auralysrp.net', -- [mainframe] notre hébergement de médias (VPS takehost02)
         '*.ibb.co',
         '*.postimg.cc',
         '*.gyazo.com',
