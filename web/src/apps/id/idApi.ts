@@ -2,7 +2,7 @@ import { fetchNui, isFiveM } from '@/core/nui';
 import { apiCall, apiData } from '@/core/api';
 import { SEED_CARDS, type IdCardData } from './data';
 
-export interface IdListData { cards: IdCardData[]; portrait: string | null }
+export interface IdListData { cards: IdCardData[]; portrait: string | null; official?: boolean }
 
 let devPortrait: string | null = null;
 
@@ -11,7 +11,7 @@ export async function idList(): Promise<IdListData | null> {
     const res = await apiData<Partial<IdListData>>('sd-phone:id:list');
     if (!res) return null;
     const portrait = res.portrait ?? null;
-    return { cards: (res.cards ?? []).map(c => ({ ...c, portrait: c.portrait ?? portrait })), portrait };
+    return { cards: (res.cards ?? []).map(c => ({ ...c, portrait: c.portrait ?? portrait })), portrait, official: res.official === true };
 }
 
 export async function idSetPortrait(url: string | null): Promise<boolean> {

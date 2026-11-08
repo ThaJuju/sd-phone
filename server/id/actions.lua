@@ -121,15 +121,106 @@ local function push(list, ...)
     end
 end
 
+-- PATCH MAISON (mainframe) — l'appli ID montre les papiers du serveur.
+-- Carte d'identité de la mairie et licences esx_license réellement détenues,
+-- lues par `exports.mainframe:PapersForPhone`, et jamais l'identifiant ESX
+-- (`charN:…`) : le joueur y est désigné par ses numéros et son UID. Le
+-- portrait est la photo officielle, que le joueur ne peut pas remplacer.
+-- Voir PATCHES.md § 11.
+
+---Papers from mainframe, or nil when it is not running or failed.
+---@param src integer
+---@return table|nil
+local function mainframePapers(src)
+    if GetResourceState('mainframe') ~= 'started' then return nil end
+    local okCall, papers = pcall(function() return exports.mainframe:PapersForPhone(src) end)
+    if okCall and type(papers) == 'table' then return papers end
+    return nil
+end
+
+---@type table<string, string> Document state shown under the holder's name.
+local STATUS_LABEL <const> = { revoked = 'RÉVOQUÉE', expired = 'EXPIRÉE' }
+
+---Cards built from mainframe papers.
+---@param src integer
+---@param papers table
+---@return table[] cards
+---@return string|nil portrait
+local function mainframeCards(src, papers)
+    local name = ((papers.firstname or '') .. ' ' .. (papers.lastname or '')):gsub('^%s+', ''):gsub('%s+$', '')
+    if name == '' then name = player.getName(src) end
+    local portrait = papers.photo
+    local issuer   = CFG.Issuer or 'State of San Andreas'
+    local uid      = papers.uniqueId
+    local cards    = {}
+
+    if papers.identity then
+        local fields = {}
+        push(fields,
+            field('number', papers.identity.number),
+            field('dob', papers.dob),
+            field('sex', papers.sex),
+            field('height', tonumber(papers.identity.height) and (papers.identity.height .. ' cm') or nil),
+            field('uid', uid))
+        cards[#cards + 1] = {
+            key = 'state', kind = 'state', title = '', color = STATE_COLOR,
+            subtitle = STATUS_LABEL[papers.identity.status],
+            name = name, portrait = portrait, issuer = issuer, fields = fields,
+        }
+    end
+
+    for _, lic in ipairs(papers.licences or {}) do
+        local key = tostring(lic.key)
+        local def = CFG.Licences[key] or {}
+        local fields = {}
+        push(fields,
+            field('number', lic.number),
+            field('categories', lic.categories),
+            field('dob', papers.dob),
+            field('uid', uid))
+        cards[#cards + 1] = {
+            key = 'licence:' .. key, kind = 'licence',
+            title = tostring(lic.label or def.label or key):sub(1, 40),
+            color = def.color or util.colorFor(key),
+            subtitle = STATUS_LABEL[lic.status],
+            name = name, portrait = portrait, issuer = issuer, fields = fields,
+        }
+    end
+
+    local jobName = player.getJob(src)
+    if jobName and jobName ~= '' and jobName ~= 'unemployed' then
+        local label = job.getLabel(jobName) or jobName
+        local fields = {}
+        push(fields, field('rank', gradeLabel(src)), field('uid', uid))
+        cards[#cards + 1] = {
+            key = 'job', kind = 'job', title = label,
+            color = (CFG.JobColors or {})[jobName] or util.colorFor(jobName),
+            name = name, portrait = portrait, issuer = label, fields = fields,
+        }
+    end
+
+    return cards, portrait
+end
+
 ---Every card the caller can show, top of the stack first: the State ID, one card per held licence
 ---in the catalogue, then the job badge. Identity comes from the framework's records; the client
 ---never supplies any of it.
 ---@param src integer player server id
 ---@return table[]|nil cards nil when the player can't be resolved
 ---@return string|nil portrait
+---@return boolean|nil official true when the cards come from mainframe (portrait locked)
 function actions.buildCards(src)
     local cid = cidOf(src)
     if not cid then return nil end
+
+    local papers = mainframePapers(src)
+    if papers then
+        local cards, portrait = mainframeCards(src, papers)
+        return cards, portrait, true
+    end
+
+    -- Sans mainframe, l'identifiant ESX n'est pas un numéro de citoyen : on le tait.
+    local shownCid = framework.name ~= 'esx' and cid or nil
 
     local citizen  = records.getCitizen(cid) or {}
     local name     = citizen.name
@@ -144,7 +235,7 @@ function actions.buildCards(src)
         field('dob', citizen.dob),
         field('sex', citizen.sex),
         field('nationality', citizen.nationality),
-        field('citizen', cid),
+        field('citizen', shownCid),
         field('phone', citizen.phone))
     cards[#cards + 1] = {
         key = 'state', kind = 'state', title = '', color = STATE_COLOR,
@@ -154,7 +245,7 @@ function actions.buildCards(src)
     for _, key in ipairs(orderedLicences(heldLicences(src, citizen))) do
         local def = CFG.Licences[key]
         local fields = {}
-        push(fields, field('class', key), field('citizen', cid), field('dob', citizen.dob))
+        push(fields, field('class', key), field('citizen', shownCid), field('dob', citizen.dob))
         cards[#cards + 1] = {
             key = 'licence:' .. key, kind = 'licence', title = def.label, color = def.color,
             name = name, portrait = portrait, issuer = issuer, fields = fields,
@@ -165,7 +256,7 @@ function actions.buildCards(src)
     if jobName and jobName ~= '' and jobName ~= 'unemployed' then
         local label = job.getLabel(jobName) or jobName
         local fields = {}
-        push(fields, field('rank', gradeLabel(src)), field('callsign', citizen.callsign), field('citizen', cid))
+        push(fields, field('rank', gradeLabel(src)), field('callsign', citizen.callsign), field('citizen', shownCid))
         cards[#cards + 1] = {
             key = 'job', kind = 'job', title = label,
             color = (CFG.JobColors or {})[jobName] or util.colorFor(jobName),
@@ -180,9 +271,9 @@ end
 ---@param src integer player server id
 ---@return table envelope { cards, portrait }
 function actions.list(src)
-    local cards, portrait = actions.buildCards(src)
+    local cards, portrait, official = actions.buildCards(src)
     if not cards then return fail('id.playerNotFound', 'Player not found') end
-    return ok({ cards = cards, portrait = portrait })
+    return ok({ cards = cards, portrait = portrait, official = official == true })
 end
 
 ---Sets the caller's portrait from a Camera upload, or clears it with a nil url.
@@ -192,6 +283,7 @@ end
 function actions.setPortrait(src, payload)
     local cid = cidOf(src)
     if not cid then return fail('id.playerNotFound', 'Player not found') end
+    if mainframePapers(src) then return fail('id.officialPhoto', 'The photo comes from your official ID') end
     payload = type(payload) == 'table' and payload or {}
 
     local url = payload.url

@@ -110,7 +110,8 @@ export function Id({ onClose: _onClose }: { onClose: () => void }) {
 
             <div className="flex shrink-0 items-end justify-between px-5 pb-2 pt-1">
                 <h1 className="text-[34px] font-bold tracking-tight text-black dark:text-white">{t('id.id', 'ID')}</h1>
-                <button
+                {/* PATCH MAISON (mainframe) : photo officielle de la mairie, non remplaçable. */}
+                {!data?.official && <button
                     type="button"
                     onClick={() => setMenuOpen(true)}
                     disabled={saving}
@@ -118,7 +119,7 @@ export function Id({ onClose: _onClose }: { onClose: () => void }) {
                     className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/[0.06] text-black active:opacity-60 disabled:opacity-40 dark:bg-white/10 dark:text-white"
                 >
                     <Ellipsis className="h-5 w-5" strokeWidth={2.2} />
-                </button>
+                </button>}
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar px-5 pb-8">

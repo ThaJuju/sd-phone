@@ -314,6 +314,39 @@ lien). Un texte collé (lien) se comporte comme avant.
 | `web/src/apps/photos/Photos.tsx` | **modifié** — écoute du collage pendant la fenêtre d'import, état « import en cours » / échec |
 | `locales/en.json`, `locales/fr.json` | **modifié** — `photos.importMessagePaste`, `importPasting`, `importPasteUnreadable` (remplace `importMessage`) |
 
+## 11. Appli ID : les papiers viennent de mainframe
+
+**Problème** : l'appli ID fabriquait ses cartes elle-même. Elle imprimait
+l'identifiant ESX du personnage (`char1:<discord>`) en « N° de citoyen » sur
+chaque carte, lisait `user_licenses` sans les libellés du serveur et ignorait
+les vrais documents de la mairie (`player_documents`, numéros `ID-…`, `PC-…`,
+`PPA-…`, révocation). Le joueur pouvait aussi y mettre n'importe quelle photo,
+y compris par lien, et la montrer par AirShare.
+
+**Correctif** : si `mainframe` tourne, `actions.buildCards` demande les papiers
+à `exports.mainframe:PapersForPhone(src)` (module `documents`) :
+
+- carte d'identité **seulement si** la mairie l'a délivrée : numéro, date de
+  naissance, sexe, taille, UID ; « RÉVOQUÉE » / « EXPIRÉE » sous le nom ;
+- une carte par licence réellement détenue, regroupées par
+  `Config.Documents.phoneCards` (voiture, moto et poids lourd = un permis de
+  conduire avec ses catégories), avec le numéro du document physique s'il
+  existe ;
+- badge du métier actif : grade et UID ;
+- **aucun** identifiant ESX nulle part ; portrait = photo officielle, non
+  remplaçable (bouton « … » masqué, `setPortrait` refusé).
+
+Sans mainframe, le comportement amont reste, mais le « N° de citoyen » est tu
+sur ESX (ce n'est qu'un identifiant technique).
+
+| Fichier | Nature |
+|---|---|
+| `server/id/actions.lua` | **modifié** — bloc `PATCH MAISON` (`mainframePapers`, `mainframeCards`), branchement en tête de `buildCards`, `official` dans `list`, refus dans `setPortrait`, `citizen` tu sur ESX |
+| `configs/id.lua` | **modifié** — libellés en français, carte `boat`, émetteur « État de San Andreas » (seules les couleurs comptent avec mainframe) |
+| `web/src/apps/id/data.ts` | **modifié** — champs `number`, `uid`, `height`, `categories` |
+| `web/src/apps/id/idApi.ts`, `web/src/apps/id/Id.tsx` | **modifié** — drapeau `official` : pas de menu de photo |
+| `locales/en.json`, `locales/fr.json` | **modifié** — `id.field*` ajoutés, `id.officialPhoto`, `id.noCardsSub` (fr) |
+
 ## Hors de cette ressource
 
 - **Items** : `phone_black` … `phone_yellow` déclarés dans

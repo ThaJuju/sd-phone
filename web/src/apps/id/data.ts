@@ -15,6 +15,10 @@ export function fieldLabel(key: string): string {
         case 'class':       return t('id.fieldClass', 'Class');
         case 'rank':        return t('id.fieldRank', 'Rank');
         case 'callsign':    return t('id.fieldCallsign', 'Callsign');
+        case 'number':      return t('id.fieldNumber', 'Document No.');
+        case 'uid':         return t('id.fieldUid', 'UID');
+        case 'height':      return t('id.fieldHeight', 'Height');
+        case 'categories':  return t('id.fieldCategories', 'Categories');
         default:            return key;
     }
 }
@@ -29,7 +33,7 @@ export function fieldValue(key: string, value: string): string {
     return value;
 }
 
-const LTR_FIELDS = new Set(['dob', 'citizen', 'phone', 'callsign']);
+const LTR_FIELDS = new Set(['dob', 'citizen', 'phone', 'callsign', 'number', 'uid']);
 
 export function fieldDir(key: string): 'ltr' | undefined {
     return LTR_FIELDS.has(key) ? 'ltr' : undefined;
