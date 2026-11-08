@@ -21,8 +21,11 @@ import { GalleryTab } from './GalleryTab';
 import { PhotoPicker } from './PhotoPicker';
 import { PhotoTabBar, type PhotosTab } from './PhotoTabBar';
 import { PhotoViewer } from './PhotoViewer';
+import { imageToJpegDataUrl, pastedImageFile, uploadPastedImage } from './pastedImage';
 import { failText } from '@/core/api';
 import { StatusBarSpacer } from '@/ui/StatusBarSpacer';
+
+const PASTE_TIMEOUT_MS = 20000;
 
 interface ViewerState { source: 'gallery' | 'album'; index: number }
 interface CreateState { addIds: string[] }
@@ -51,6 +54,9 @@ export function Photos({ onClose }: { onClose: () => void }) {
     const [albumsEdit, setAlbumsEdit] = useState(false);
     const [canImport,  setCanImport]  = useState(false);
     const [importOpen, setImportOpen] = useState(false);
+    // null = rien en cours, 'busy' = image collée en cours d'envoi, sinon le message d'échec.
+    const [pasteStatus, setPasteStatus] = useState<'busy' | string | null>(null);
+    const pasteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [openAlbum, setOpenAlbum] = useSessionState<AlbumRef | null>('photos:openAlbum', null);
     const [customAlbumPhotos, setCustomAlbumPhotos] = useState<Photo[]>([]);
@@ -138,7 +144,49 @@ export function Photos({ onClose }: { onClose: () => void }) {
         const p = mapPhoto(photo as { id: string; url: string; createdAt: string | number });
         if (!p.id || !p.url) return;
         setPhotos(prev => (prev.some(x => x.id === p.id) ? prev : [p, ...prev]));
+        if (pasteTimer.current) {
+            clearTimeout(pasteTimer.current);
+            pasteTimer.current = null;
+            setPasteStatus(null);
+            setImportOpen(false);
+        }
     }, []));
+
+    useNuiEvent('sd-phone:photos:uploadFailed', useCallback(() => {
+        if (!pasteTimer.current) return;
+        clearTimeout(pasteTimer.current);
+        pasteTimer.current = null;
+        setPasteStatus(t('photos.importFailed', 'Could not import that image'));
+    }, []));
+
+    useEffect(() => () => { if (pasteTimer.current) clearTimeout(pasteTimer.current); }, []);
+
+    useEffect(() => {
+        if (!importOpen || !canImport) return;
+        function onPaste(e: ClipboardEvent) {
+            const file = pastedImageFile(e);
+            if (!file) return;
+            e.preventDefault();
+            if (pasteTimer.current) return;
+            pasteTimer.current = setTimeout(() => {
+                pasteTimer.current = null;
+                setPasteStatus(t('photos.importFailed', 'Could not import that image'));
+            }, PASTE_TIMEOUT_MS);
+            setPasteStatus('busy');
+            void (async () => {
+                const image = await imageToJpegDataUrl(file);
+                const sent = image ? await uploadPastedImage(image) : false;
+                if (sent || !pasteTimer.current) return;
+                clearTimeout(pasteTimer.current);
+                pasteTimer.current = null;
+                setPasteStatus(image
+                    ? t('photos.importFailed', 'Could not import that image')
+                    : t('photos.importPasteUnreadable', 'The pasted image could not be read'));
+            })();
+        }
+        window.addEventListener('paste', onPaste);
+        return () => window.removeEventListener('paste', onPaste);
+    }, [importOpen, canImport]);
 
     const refreshAlbums = useCallback(async () => {
         setAlbums(await apiListAlbums());
@@ -305,7 +353,7 @@ export function Photos({ onClose }: { onClose: () => void }) {
                                     onCancelSelect={exitGallerySelect}
                                     onPhotoTap={openViewerFromGallery}
                                     onToggleSelect={toggleGallerySelect}
-                                    onImport={canImport ? () => setImportOpen(true) : undefined}
+                                    onImport={canImport ? () => { setPasteStatus(null); setImportOpen(true); } : undefined}
                                     hasMore={nextCursor !== null}
                                     loadingMore={loadingMore}
                                     onLoadMore={() => void loadMore()}
@@ -417,12 +465,18 @@ export function Photos({ onClose }: { onClose: () => void }) {
             {importOpen && (
                 <PromptDialog
                     title={t('photos.importTitle', 'Import Photo')}
-                    message={t('photos.importMessage', 'Paste a direct link to an image.')}
+                    message={pasteStatus === 'busy'
+                        ? t('photos.importPasting', 'Importing the pasted image…')
+                        : pasteStatus ?? t('photos.importMessagePaste', 'Paste a direct link to an image, or an image copied to your clipboard (Ctrl+V).')}
                     placeholder="https://"
                     inputMode="url"
                     maxLength={512}
                     confirmLabel={t('photos.import', 'Import')}
-                    onCancel={() => setImportOpen(false)}
+                    onCancel={() => {
+                        if (pasteTimer.current) { clearTimeout(pasteTimer.current); pasteTimer.current = null; }
+                        setImportOpen(false);
+                        setPasteStatus(null);
+                    }}
                     onConfirm={async url => {
                         const trimmed = url.trim();
                         if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return t('photos.importInvalidUrl', 'Enter a full image URL');

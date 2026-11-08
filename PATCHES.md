@@ -295,6 +295,25 @@ Hors de cette ressource, adaptés en même temps :
 - `mainframe` (numéro, factures, dispatch, prise de service) et `sd-tictactoe`
   n'ont rien à changer : ils passent par la session du joueur.
 
+## 10. Galerie : coller une image du presse-papiers
+
+**Besoin** : la fenêtre « Importer une photo » de la galerie n'acceptait qu'un
+lien. On peut maintenant y faire **Ctrl+V** sur une image copiée (capture
+d'écran, image copiée dans un navigateur…).
+
+L'image collée est convertie en JPEG (côté le plus long ≤ 1920 px, qualité
+réduite si besoin pour rester sous le plafond de 4 Mo) puis envoyée par le même
+chemin qu'une photo de l'appareil (`sd-phone:camera:httpSlot`, repli
+`sd-phone:camera:capture`) : aucun changement serveur, mêmes limites de débit.
+Proposé seulement quand l'import est autorisé (`getCanImportPhotos`, comme le
+lien). Un texte collé (lien) se comporte comme avant.
+
+| Fichier | Nature |
+|---|---|
+| `web/src/apps/photos/pastedImage.ts` | **nouveau** — lecture du presse-papiers, conversion JPEG, envoi |
+| `web/src/apps/photos/Photos.tsx` | **modifié** — écoute du collage pendant la fenêtre d'import, état « import en cours » / échec |
+| `locales/en.json`, `locales/fr.json` | **modifié** — `photos.importMessagePaste`, `importPasting`, `importPasteUnreadable` (remplace `importMessage`) |
+
 ## Hors de cette ressource
 
 - **Items** : `phone_black` … `phone_yellow` déclarés dans
